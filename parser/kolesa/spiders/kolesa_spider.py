@@ -13,9 +13,11 @@ class KolesaSpider(Spider):
 	i = 0
 
 	def parse(self, response):
-		print (response.url)
+		# print (response.url)
 		page = BeautifulSoup(response.text, 'lxml')
-		links = page.select('div.result-block.col-sm-8 div.list-title a.list-link')
+		links = page.select('a.list-link.ddl_product_link')
+		# print(links)
+		# links = page.select('div.result-block.col-sm-8 div.list-title a.list-link')
 		links = ['https://kolesa.kz' + link.get('href') for link in links]
 		for link in links:
 			yield Request(link, callback=self.parse_item)
@@ -31,8 +33,9 @@ class KolesaSpider(Spider):
 		print (self.i, url)
 		page = BeautifulSoup(response.text, 'lxml')
 
-		features = page.select('dl.clearfix.dl-horizontal.description-params dt.value-title') 
-		values = page.select('dl.clearfix.dl-horizontal.description-params dd.value.clearfix')
+		features = page.select('div.offer__parameters dt.value-title') 
+		# print(features)
+		values = page.select('div.offer__parameters dd.value')
 
 		features_strip = []
 		values_strip = []
@@ -41,12 +44,13 @@ class KolesaSpider(Spider):
 			feature_strip = feature.get_text().strip()
 			if (feature_strip != ''):
 				features_strip.append(feature_strip)
+		# print(features_strip)
 
 		for value in values:
 			value_strip = value.get_text().strip()
 			if (value_strip != ''):
 				values_strip.append(value_strip)
-
+		# print(values_strip)
 		pairs = {}
 		for i in range(0, len(features_strip)):
 			pairs[features_strip[i]] = values_strip[i]
@@ -57,7 +61,6 @@ class KolesaSpider(Spider):
 		s = pairs['Объем двигателя, л']
 		engine_type = s[s.find("(") + 1 : s.find(")")]
 		volume = float(s[:s.find("(")])
-
 		transmission = pairs['Коробка передач']
 		helm = pairs['Руль']
 		try:
@@ -77,19 +80,22 @@ class KolesaSpider(Spider):
 		except:
 			mileage = None
 
-		index = page.select('div.a-title__container')[0].get_text().split().index('года')
-
-		year = int(page.select('div.a-title__container')[0].get_text().split()[index - 1])
-
+		# index = page.select('div.a-title__container')[0].get_text().split().index('года')
+		# print(index)
+		year = indexnt(page.select('h1.offer__title span.year')[0].get_text().strip())
 		age = date.today().year - year
 		
-		price_string = page.select('span.a-price__text')[0].get_text().strip()[:-1]
+		price_string = page.select('div.offer__sidebar-header div.offer__price')[0].get_text().strip()[:-1]
 		price = int(''.join(re.findall('\d+', price_string)))
+
+		l = len(page.select('div.offer__description div.text'))
+		print(l)
 		
 		try:
-			options = page.select('div.a-params')[0].get_text().strip()
+			options = page.select('div.offer__description div.text')[0].get_text().strip()
 		except:
 			options = ''
+		# print(options)
 		
 		try:
 			photos = len(page.select('ul.photo-list')[0])
