@@ -5,6 +5,11 @@ from bs4 import BeautifulSoup
 from kolesa.items import KolesaItem
 import re
 from datetime import date
+import requests
+
+headers = {	'User-Agent': 'Mozilla/5.0',
+			'Content-Type': 'application/json; charset=UTF-8',
+			'X-Requested-With': 'XMLHttpRequest'}
 
 class KolesaSpider(Spider):
 	name = "kolesa"
@@ -13,11 +18,8 @@ class KolesaSpider(Spider):
 	i = 0
 
 	def parse(self, response):
-		# print (response.url)
 		page = BeautifulSoup(response.text, 'lxml')
 		links = page.select('a.list-link.ddl_product_link')
-		# print(links)
-		# links = page.select('div.result-block.col-sm-8 div.list-title a.list-link')
 		links = ['https://kolesa.kz' + link.get('href') for link in links]
 		for link in links:
 			yield Request(link, callback=self.parse_item)
@@ -34,7 +36,6 @@ class KolesaSpider(Spider):
 		page = BeautifulSoup(response.text, 'lxml')
 
 		features = page.select('div.offer__parameters dt.value-title') 
-		# print(features)
 		values = page.select('div.offer__parameters dd.value')
 
 		features_strip = []
@@ -44,13 +45,12 @@ class KolesaSpider(Spider):
 			feature_strip = feature.get_text().strip()
 			if (feature_strip != ''):
 				features_strip.append(feature_strip)
-		# print(features_strip)
 
 		for value in values:
 			value_strip = value.get_text().strip()
 			if (value_strip != ''):
 				values_strip.append(value_strip)
-		# print(values_strip)
+
 		pairs = {}
 		for i in range(0, len(features_strip)):
 			pairs[features_strip[i]] = values_strip[i]
@@ -80,36 +80,35 @@ class KolesaSpider(Spider):
 		except:
 			mileage = None
 
-		# index = page.select('div.a-title__container')[0].get_text().split().index('года')
-		# print(index)
-		year = indexnt(page.select('h1.offer__title span.year')[0].get_text().strip())
+		year = int(page.select('h1.offer__title span.year')[0].get_text().strip())
 		age = date.today().year - year
 		
 		price_string = page.select('div.offer__sidebar-header div.offer__price')[0].get_text().strip()[:-1]
 		price = int(''.join(re.findall('\d+', price_string)))
 
-		l = len(page.select('div.offer__description div.text'))
-		print(l)
+		# l = len(page.select('div.offer__description div.text'))
+		# print(l)
 		
-		try:
-			options = page.select('div.offer__description div.text')[0].get_text().strip()
-		except:
-			options = ''
+		# try:
+		# 	options = page.select('div.offer__description div.text')[0].get_text().strip()
+		# except:
+		# 	options = ''
 		# print(options)
-		
+
+		# try:
+		# 	description = page.select('div.description-text')[0].get_text().strip()
+		# 	description = ' '.join(description.split())
+		# except:
+		# 	description = ''
+		# print(page.select('ul.gallery__thumbs-list.js__gallery-thumbs li.gallery__thumb.js__gallery-thumb picture'))
+
 		try:
-			photos = len(page.select('ul.photo-list')[0])
+			photos = len(page.select('ul.gallery__thumbs-list.js__gallery-thumbs li.gallery__thumb.js__gallery-thumb picture'))
 		except:
 			photos = 0
 
-		try:
-			description = page.select('div.description-text')[0].get_text().strip()
-			description = ' '.join(description.split())
-		except:
-			description = ''
-
-		manufacturer = page.select('h1.a-title__text span')[0].get_text().strip()
-		model = page.select('h1.a-title__text span')[1].get_text().strip()
+		manufacturer = page.select('h1.offer__title span')[0].get_text().strip()
+		model = page.select('h1.offer__title span')[1].get_text().strip()
 
 		main_options = {
 			'ads_id': ads_id,
@@ -129,14 +128,19 @@ class KolesaSpider(Spider):
 			'color': color,
 			'metallic': metallic,
 			'photos': photos,
-			'drive': drive,
-			'description': description,
-			'options': options
+			'drive': drive
+			# 'description': description,
+			# 'options': options
 		}
 		item = KolesaItem()
 		for key, value in main_options.items():
 			item[key] = value
-		# item['url'] = url
-		# item['year'] = year
-		# item['price'] = price
+		item['url'] = url
+		item['year'] = year
+		item['price'] = price
+
+		phoneAjaxUrl   = 'https://kolesa.kz/a/ajaxPhones/?id=' + ads_id
+		phoneResponse  = requests.get(phoneAjaxUrl, headers=headers)
+		phone = phoneResponse.json()['data']['model']['phone'].replace(' ', '')
+		item['phone'] = phone
 		return item

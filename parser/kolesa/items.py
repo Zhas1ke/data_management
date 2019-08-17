@@ -31,5 +31,6 @@ class KolesaItem(Item):
 	metallic = Field()
 	photos = Field()
 	drive = Field()
-	description = Field()
-	options = Field()
+	phone = Field()
+	# description = Field()
+	# options = Field()
