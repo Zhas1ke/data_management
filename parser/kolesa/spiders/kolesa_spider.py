@@ -141,6 +141,6 @@ class KolesaSpider(Spider):
 
 		phoneAjaxUrl   = 'https://kolesa.kz/a/ajaxPhones/?id=' + ads_id
 		phoneResponse  = requests.get(phoneAjaxUrl, headers=headers)
-		phone = phoneResponse.json()['data']['model']['phone'].replace(' ', '')
+		phone = ','.join([x.replace(' ','') for x in phoneResponse.json()['phones']])
 		item['phone'] = phone
 		return item
